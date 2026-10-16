@@ -31,6 +31,26 @@ jobs:
           name: px4_fmu-v4_rover
           path: build/px4_fmu-v4_rover/px4_fmu-v4_rover.px4
 
+  fmu-v3-rover:
+    name: px4_fmu-v3_rover
+    runs-on: ubuntu-latest
+    container:
+      image: px4io/px4-dev:v1.17.0-rc2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Mark workspace safe
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Build firmware
+        run: make px4_fmu-v3_rover
+      - name: Firmware size
+        run: arm-none-eabi-size build/px4_fmu-v3_rover/px4_fmu-v3_rover.elf
+      - uses: actions/upload-artifact@v4
+        with:
+          name: px4_fmu-v3_rover
+          path: build/px4_fmu-v3_rover/px4_fmu-v3_rover.px4
+
   sitl:
     name: px4_sitl
     runs-on: ubuntu-latest
@@ -47,7 +67,7 @@ jobs:
 
   release:
     name: Release v1.17.0-N
-    needs: fmu-v4-rover
+    needs: [fmu-v4-rover, fmu-v3-rover]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
@@ -60,6 +80,9 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: px4_fmu-v4_rover
+      - uses: actions/download-artifact@v4
+        with:
+          name: px4_fmu-v3_rover
       - name: Next release number
         id: ver
         env:
@@ -73,4 +96,6 @@ jobs:
           tag_name: ${{ steps.ver.outputs.tag }}
           target_commitish: ${{ github.sha }}
           name: ${{ steps.ver.outputs.tag }}
-          files: px4_fmu-v4_rover.px4
+          files: |
+            px4_fmu-v4_rover.px4
+            px4_fmu-v3_rover.px4
