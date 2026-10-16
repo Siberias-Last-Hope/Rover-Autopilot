@@ -44,3 +44,33 @@ jobs:
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Build SITL
         run: make px4_sitl_default
+
+  release:
+    name: Release v1.17.0-N
+    needs: fmu-v4-rover
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # serialize so two quick pushes cannot pick the same number
+    concurrency:
+      group: rover-release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: px4_fmu-v4_rover
+      - name: Next release number
+        id: ver
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          last=$(gh api --paginate "repos/${{ github.repository }}/git/matching-refs/tags/v1.17.0-" \
+            --jq '.[].ref | sub("refs/tags/v1.17.0-"; "")' | grep -E '^[0-9]+$' | sort -n | tail -1)
+          echo "tag=v1.17.0-$(( ${last:-0} + 1 ))" >> "$GITHUB_OUTPUT"
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ steps.ver.outputs.tag }}
+          files: px4_fmu-v4_rover.px4
