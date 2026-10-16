@@ -1,0 +1,50 @@
+#!/bin/sh
+#
+# @name Siberia's Last Hope Rover
+#
+# @type Rover
+# @class Rover
+#
+#
+# 4-wheel skid-steer rover on Pixracer (fmu-v4), Raspberry Pi 5 companion
+# (ROS 2 Jazzy over uXRCE-DDS), indoor navigation from external visual odometry.
+# Only BASE parameters here, no controller tuning.
+#
+
+. ${R}etc/init.d/rc.rover_differential_defaults
+
+# --- Companion computer link: uXRCE-DDS on TELEM2 ---
+param set-default UXRCE_DDS_CFG 102     # TELEM 2
+param set-default SER_TEL2_BAUD 921600
+
+# --- State estimation: external vision only (indoor, no GPS) ---
+param set-default SYS_HAS_GPS 0         # no GPS on board
+param set-default SYS_HAS_MAG 0         # yaw comes from vision, magnetometer unused
+param set-default EKF2_GPS_CTRL 0       # GPS fusion off
+param set-default EKF2_MAG_TYPE 5       # no magnetometer fusion
+param set-default EKF2_EV_CTRL 9        # bitmask: bit0 horizontal position + bit3 yaw
+param set-default EKF2_BARO_CTRL 0      # height not used (EKF2 falls back to fake height)
+param set-default EKF2_RNG_CTRL 0       # no range finder
+param set-default EKF2_OF_CTRL 0        # no optical flow
+param set-default EKF2_HGT_REF 0
+
+# --- Actuator outputs (PWM MAIN) ---
+# The rover module commands two virtual motors: Motor 1 = RIGHT side, Motor 2 = LEFT side
+# (see DifferentialActControl). Each virtual motor drives two physical ESCs.
+param set-default PWM_MAIN_FUNC1 102    # output 1: left  (Motor 2)
+param set-default PWM_MAIN_FUNC2 102    # output 2: left  (Motor 2)
+param set-default PWM_MAIN_FUNC3 101    # output 3: right (Motor 1)
+param set-default PWM_MAIN_FUNC4 101    # output 4: right (Motor 1)
+# ESCs are bidirectional (CA_R_REV=3 in rc.rover_differential_defaults), so neutral is 1500 us.
+# The default disarmed value of 1000 us would mean full reverse on a bidirectional ESC.
+param set-default PWM_MAIN_DIS1 1500
+param set-default PWM_MAIN_DIS2 1500
+param set-default PWM_MAIN_DIS3 1500
+param set-default PWM_MAIN_DIS4 1500
+
+# --- Safety: RC kill switch ---
+param set-default RC_MAP_KILL_SW 7      # TODO: set to the real transmitter channel
+
+# --- Geometry / speed placeholders ---
+param set-default RD_WHEEL_TRACK 0.30   # [m] TODO: MEASURE (distance between left and right wheels)
+param set-default RO_MAX_THR_SPEED 1.0  # [m/s] TODO: MEASURE (speed at full throttle)
