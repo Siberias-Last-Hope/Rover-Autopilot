@@ -1,0 +1,46 @@
+name: Rover build
+
+on:
+  push:
+    branches: ['rover']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fmu-v4-rover:
+    name: px4_fmu-v4_rover
+    runs-on: ubuntu-latest
+    container:
+      image: px4io/px4-dev:v1.17.0-rc2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Mark workspace safe
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Build firmware
+        run: make px4_fmu-v4_rover
+      - name: Firmware size
+        run: arm-none-eabi-size build/px4_fmu-v4_rover/px4_fmu-v4_rover.elf
+      - uses: actions/upload-artifact@v4
+        with:
+          name: px4_fmu-v4_rover
+          path: build/px4_fmu-v4_rover/px4_fmu-v4_rover.px4
+
+  sitl:
+    name: px4_sitl
+    runs-on: ubuntu-latest
+    container:
+      image: px4io/px4-dev:v1.17.0-rc2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Mark workspace safe
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Build SITL
+        run: make px4_sitl_default
